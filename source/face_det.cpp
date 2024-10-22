@@ -6,7 +6,7 @@
  */
 
  // #include "board_init.h"
-
+#include "fsl_flash.h"
 #include <stdio.h>
 #include "fsl_debug_console.h"
 #include "image.h"
@@ -225,7 +225,7 @@ void ezh_copy_slice_to_model_input(uint32_t idx, uint32_t cam_slice_buffer, uint
 		if (MODEL_IN_COLOR_BGR == 1) {
 			Rgb565StridedToBgr888((uint16_t*)cam_slice_buffer, cam_slice_width, cam_slice_width, cam_slice_height, WND_X0, wndY, pCurDat, s_imgStride, 1);
 		}else {
-			Rgb565StridedToRgb888((uint16_t*)cam_slice_buffer, cam_slice_width, cam_slice_width, cam_slice_height, WND_X0, wndY, pCurDat, s_imgStride, 1);
+			Rgb565StridedToRgb888((uint16_t*)cam_slice_buffer, cam_slice_width, cam_slice_width, cam_slice_height, WND_X0, wndY, pCurDat, s_imgStride, 0);
 		}
 
 		if (s_odRetCnt)
@@ -363,4 +363,32 @@ void face_det()
 
 }
 
+/* Write image to the Flasg to given address
 
+flashCfg - flash configuration structure
+
+destFlashAddr - target address to write the image
+
+returns - 0 if failed; address for next image */
+
+uint32_t writeToFlash(flash_config_t * flashCfg, uint32_t destFlashAddr) {
+
+    status_t status;
+
+    while (g_isImgBufReady == 0);
+
+    uint32_t nextAddr = destFlashAddr + MODEL_IN_H * MODEL_IN_W * MODEL_IN_C;
+
+    if (nextAddr >= 0x200000UL) {  // exceeds 2MB flash size
+
+        return 0;
+
+    }
+
+    status = FLASH_Program(flashCfg, destFlashAddr, (uint8_t *)model_input_buf, MODEL_IN_H * MODEL_IN_W * MODEL_IN_C);
+
+    if (status == kStatus_Success) {
+
+        return nextAddr;
+	}
+}
